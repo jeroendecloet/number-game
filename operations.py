@@ -3,10 +3,11 @@ import numpy as np
 
 
 class BaseOperation(ABC):
+    """ Base operation """
+    names = list
 
     def __init__(self):
         super().__init__()
-        # self.duplicates = True
 
     def __call__(self, x: np.ndarray, y: np.ndarray, x_str: np.ndarray, y_str: np.ndarray) -> (np.ndarray, np.ndarray):
 
@@ -26,10 +27,6 @@ class BaseOperation(ABC):
         # Filter outputs (if any)
         results, results_str = self.filter_outputs(results, results_str)
 
-        # Remove duplicates if activated
-        # if self.duplicates:
-        #     results, results_str = self.remove_duplicates(results, results_str)
-
         return results, results_str
 
     @abstractmethod
@@ -46,76 +43,75 @@ class BaseOperation(ABC):
     def filter_outputs(self, results: np.ndarray, results_str: np.ndarray) -> (np.ndarray, np.ndarray):
         return results, results_str
 
-    # def remove_duplicates(self, results: np.ndarray, results_str: np.ndarray) -> (np.ndarray, np.ndarray):
-    #     """ When working with duplicate input numbers, there might be duplicates in the calculations. Remove these. """
-    #     unique_str, idx = np.unique(results_str, return_index=True)
-    #     if len(unique_str) < len(results_str):
-    #         return results[idx], unique_str
-    #     else:
-    #         return results, results_str
-    #
-    # def set_duplicates(self, duplicates):
-    #     self.duplicates = duplicates
 
-
-
-class Plus(BaseOperation):
+class Addition(BaseOperation):
+    """ Addition operator """
+    names = ['addition', 'add', 'plus']
 
     def __init__(self):
         super().__init__()
 
-    def operation(self, x, y):
+    def operation(self, x: np.ndarray, y: np.ndarray) -> (np.ndarray, np.ndarray):
         return x + y
 
-    def operation_string(self, x, y):
-        return f"({x} + {y})"
+    def operation_string(self, x_str: np.ndarray, y_str: np.ndarray) -> (np.ndarray, np.ndarray):
+        return f"({x_str} + {y_str})"
 
 
-class Minus(BaseOperation):
+class Subtraction(BaseOperation):
+    """ Subtraction operator """
+    names = ['subtraction', 'minus', 'min']
+
     def __init__(self, invert=False):
         super().__init__()
         self.invert = invert
 
-    def operation(self, x, y):
+    def operation(self, x: np.ndarray, y: np.ndarray) -> (np.ndarray, np.ndarray):
         if self.invert:
             return y - x
         else:
             return x - y
 
-    def operation_string(self, x, y):
+    def operation_string(self, x_str: np.ndarray, y_str: np.ndarray) -> (np.ndarray, np.ndarray):
         if self.invert:
-            return f"({y} - {x})"
+            return f"({y_str} - {x_str})"
         else:
-            return f"({x} - {y})"
+            return f"({x_str} - {y_str})"
 
 
-class Times(BaseOperation):
+class Multiplication(BaseOperation):
+    """ Multiplication operator """
+    names = ['multiplication', 'times']
+
     def __init__(self):
         super().__init__()
 
-    def operation(self, x, y):
+    def operation(self, x: np.ndarray, y: np.ndarray) -> (np.ndarray, np.ndarray):
         return x * y
 
-    def operation_string(self, x, y):
-        return f"({x} * {y})"
+    def operation_string(self, x_str: np.ndarray, y_str: np.ndarray) -> (np.ndarray, np.ndarray):
+        return f"({x_str} * {y_str})"
 
 
-class Divide(BaseOperation):
-    def __init__(self, invert):
+class Division(BaseOperation):
+    """ Division operator """
+    names = ['division', 'divide']
+
+    def __init__(self, invert=False):
         super().__init__()
         self.invert = invert
 
-    def operation(self, x, y):
+    def operation(self, x: np.ndarray, y: np.ndarray) -> (np.ndarray, np.ndarray):
         if self.invert:
             return y / x
         else:
             return x / y
 
-    def operation_string(self, x, y):
+    def operation_string(self, x_str: np.ndarray, y_str: np.ndarray) -> (np.ndarray, np.ndarray):
         if self.invert:
-            return f"({y} / {x})"
+            return f"({y_str} / {x_str})"
         else:
-            return f"({x} / {y})"
+            return f"({x_str} / {y_str})"
 
     def filter_inputs(self, x: np.ndarray, y: np.ndarray, x_str: np.ndarray, y_str: np.ndarray) -> (np.ndarray, np.ndarray, np.ndarray, np.ndarray):
         """ Filter out division by zero. """
@@ -127,3 +123,48 @@ class Divide(BaseOperation):
             y = y[y != 0]
 
         return x, y, x_str, y_str
+
+
+class Power(BaseOperation):
+    """ Power operation """
+    names = ['power']
+
+    def __init__(self, invert=False):
+        super().__init__()
+        self.invert = invert
+
+    def operation(self, x: np.ndarray, y: np.ndarray) -> (np.ndarray, np.ndarray):
+        try:
+            if self.invert:
+                return y ** x
+            else:
+                return x ** y
+        except OverflowError:
+            print(x, y, self.invert)
+        except RuntimeWarning:
+            print(x, y, self.invert)
+
+    def operation_string(self, x_str: np.ndarray, y_str: np.ndarray) -> (np.ndarray, np.ndarray):
+        if self.invert:
+            return f"({y_str} ^ {x_str})"
+        else:
+            return f"({x_str} ^ {y_str})"
+
+    def filter_inputs(self, x: np.ndarray, y: np.ndarray, x_str: np.ndarray, y_str: np.ndarray) -> (np.ndarray, np.ndarray, np.ndarray, np.ndarray):
+        """ Filter out bases and powers smaller than 0.01 or larger than 100. """
+        _min = 1e-2
+        _max = 1e2
+        x_str = x_str[(_min < x) & (x < _max)]
+        x = x[(_min < x) & (x < _max)]
+        y_str = y_str[(_min < y) & (y < _max)]
+        y = y[(_min < y) & (y < _max)]
+
+        return x, y, x_str, y_str
+
+    def filter_outputs(self, results: np.ndarray, results_str: np.ndarray) -> (np.ndarray, np.ndarray):
+        """ Filter out results smaller than 1e-10 and larger than 1e10. """
+        _min = 1e-10
+        _max = 1e10
+        results_str = results_str[(_min < results) & (results < _max)]
+        results = results[(_min < results) & (results < _max)]
+        return results, results_str
