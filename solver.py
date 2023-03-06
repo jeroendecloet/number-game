@@ -1,14 +1,68 @@
-import copy
+from inspect import isclass
+from typing import Union
+
 import numpy as np
 from itertools import combinations
 
-from operations import Plus, Minus, Times, Divide
+import operations as ops
+
+
+def get_operations(operation_names: list[str]) -> list[callable]:
+    """
+    Translates a list of operation names to actual instanced operations.
+
+    Inputs
+    ------
+    operation_names: list
+        List of names of operations to use, e.g. `plus` or `multiplication`
+
+    Outputs
+    -------
+    operations: list
+        List with instanced/callable operations
+
+    """
+    all_operation_names = [_class for _class in dir(ops) if (isclass(getattr(ops, _class))) and (_class != 'BaseOperation') and issubclass(getattr(ops, _class), ops.BaseOperation)]
+
+    # Make a list of all aliases of the operations
+    aliases = dict()
+    for name in all_operation_names:
+        op = getattr(ops, name)
+        aliases = {**aliases, **dict(zip(op.names, [name] * len(op.names)))}
+
+    # Look through the operations to
+    operations = list()
+    active_operations = list()
+    for name in operation_names:
+        # I
+        if name in aliases:
+            # Check if the operation has not been added already
+            if aliases[name] in active_operations:
+                print(f"Operation {name} already found! Skipping...")
+                continue
+
+            op = getattr(ops, aliases[name])
+            # Initialize operations
+            if 'invert' in op.__init__.__code__.co_varnames:
+                # Add both normal and inverted operation (if available)
+                operations.append(op(invert=False))
+                operations.append(op(invert=True))
+            else:
+                operations.append(op())
+
+            active_operations.append(aliases[name])
+        else:
+            print(f"Operation {name} not found!")
+
+    return operations
 
 
 class Solver:
-
-    def __init__(self, operators: list):
-        self.operators = operators
+    """
+    Solver to perform operations on numbers to see if target number(s) can be reached.
+    """
+    def __init__(self, operations: list):
+        self.operations = operations
 
         self.sskg = StirlingSecondKindGenerator()
 
@@ -22,7 +76,19 @@ class Solver:
         self.results = None
         self.results_string = None
 
-    def __call__(self, inputs, target):
+    def __call__(self, inputs: list[int, float], targets: Union[int, float, list[int, float]]) -> dict[Union[int, float], str]:
+        # Initialize the result variables
+        self.initialize(inputs)
+
+        # Calculate all combinations
+        self.calculate_combinations()
+
+        # Get computations for targets
+        return self.get_targets_computation(targets)
+
+    def initialize(self, inputs):
+        assert inputs is not None, "inputs cannot be None!"
+
         # Get list of inputs
         self.inputs = inputs
 
@@ -30,25 +96,6 @@ class Solver:
             self.duplicates = False
         else:
             self.duplicates = True
-
-        # for operation in self.operators:
-        #     operation.set_duplicates(self.duplicates)
-
-        self.initialize()
-
-        self.calculate_combinations()
-
-        results = list(self.results[self.n].values())[0]
-        results_string = list(self.results_string[self.n].values())[0]
-
-        isin = np.where(results == target)[0]
-        if len(isin) > 0:
-            return results_string[isin]
-        else:
-            print("No results found!")
-
-    def initialize(self):
-        assert self.inputs is not None, "inputs cannot be None!"
 
         self.n = len(self.inputs)
         self.range_n = range(self.n)
@@ -91,7 +138,7 @@ class Solver:
                     p2_string = self.results_string[len(part2)][part2]
 
                     # Loop over all active operations and append the results
-                    for operation in self.operators:
+                    for operation in self.operations:
                         result, result_str = operation(p1, p2, p1_string, p2_string)
                         self.results[_n][combi] = np.append(self.results[_n][combi], result)
                         self.results_string[_n][combi] = np.append(self.results_string[_n][combi], result_str)
@@ -103,6 +150,28 @@ class Solver:
                         if len(unique_str) < len(self.results_string[_n][combi]):
                             self.results[_n][combi] = self.results[_n][combi][idx]
                             self.results_string[_n][combi] = unique_str
+
+    def get_targets_computation(self, targets: Union[int, float, list[int, float]]) -> dict[Union[int, float], str]:
+        """
+        For a single target or list of targets, get the computation to achieve the target.
+        """
+        # Get the results at the highest level (i.e. self.n)
+        results = list(self.results[self.n].values())[0]
+        results_string = list(self.results_string[self.n].values())[0]
+
+        # Check if the target(s) have been found
+        if isinstance(targets, (int, float)):
+            targets = [targets]
+
+        out = dict()
+        for target in targets:
+            isin = np.where(results == target)[0]
+            if len(isin) > 0:
+                out[target] = results_string[isin]
+            else:
+                out[target] = "Not possible!"
+
+        return out
 
 
 class StirlingSecondKindGenerator:
@@ -168,14 +237,9 @@ if __name__ == "__main__":
     # print(r)
     # print(len(r))
 
-    solver = Solver(operators=[
-        Plus(),
-        Minus(invert=False),
-        Minus(invert=True),
-        Times(),
-        Divide(invert=False),
-        Divide(invert=True),
-    ])
+    operations = get_operations(['plus', 'min', 'times', 'division'])
+
+    solver = Solver(operations=operations)
 
     numbers = [3, 3, 7, 7]
     out = solver(numbers, 24)
