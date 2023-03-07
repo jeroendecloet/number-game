@@ -9,7 +9,8 @@ class TwentyFourGame:
     multiplication and division. For example:
     1, 3, 5, 7 --> (5 + 1) * (7 - 3) = 24
 
-    Using this method:
+    Examples
+    --------
     >>> TwentyFourGame()([1, 3, 5, 7])
     array(['((3 - 1) * (5 + 7))', '((1 + 5) * (7 - 3))'], dtype='<U19')
     """
@@ -34,19 +35,20 @@ class SevenSevensGame:
     2 = (7 ** (7 / 7)) / 7 + 7 / 7 + 7 - 7
     ...
 
-    Using this method:
+    Examples
+    --------
     >>> SevenSevensGame()(range(3))
     {
-        0: array(['((((((7 * 7) * 7) / 7) / 7) - 7) * 7)', ... ]),
-        1: array(['((((((7 * 7) * 7) / 7) + 7) / 7) - 7)', ... ]),
-        2: array(['((((((7 * 7) * 7) / 7) / 7) + 7) / 7)', ... ])
+        0: array(['((((((7 * 7) * 7) / 7) / 7) - 7) * 7)']),
+        1: array(['((((((7 * 7) * 7) / 7) + 7) / 7) - 7)']),
+        2: array(['((((((7 * 7) * 7) / 7) / 7) + 7) / 7)'])
     }
     """
 
     def __init__(self):
         operation_names = ['plus', 'min', 'times', 'divide', 'power']
         operations = get_operations(operation_names)
-        self.s = Solver(operations)
+        self.s = Solver(operations, reduce_multiple_answers=True)
 
         # Check for calculation
         self._did_calc = False
@@ -68,5 +70,5 @@ class SevenSevensGame:
 
 
 if __name__ == "__main__":
-    a = SevenSevensGame()(range(5))
+    a = SevenSevensGame()(range(100))
     print(a)

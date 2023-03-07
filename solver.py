@@ -60,9 +60,26 @@ def get_operations(operation_names: list[str]) -> list[callable]:
 class Solver:
     """
     Solver to perform operations on numbers to see if target number(s) can be reached.
+
+    Inputs
+    ------
+    operations: list[str]
+        ...
+    reduce_multiple_answers: bool
+        ...
+
+    Returns
+    -------
+    results: dict[int, np.ndarray[str]]
+        ...
+
+    Examples
+    --------
+    ...
     """
-    def __init__(self, operations: list):
+    def __init__(self, operations: list[Union[str, callable]], reduce_multiple_answers: bool = False):
         self.operations = operations
+        self.reduce_multiple_answers = reduce_multiple_answers
 
         self.sskg = StirlingSecondKindGenerator()
 
@@ -76,7 +93,7 @@ class Solver:
         self.results = None
         self.results_string = None
 
-    def __call__(self, inputs: list[int, float], targets: Union[int, float, list[int, float]]) -> dict[Union[int, float], str]:
+    def __call__(self, inputs: list[int, float], targets: Union[int, float, list[int, float]]) -> dict[Union[int, float], np.ndarray[str]]:
         # Initialize the result variables
         self.initialize(inputs)
 
@@ -87,7 +104,8 @@ class Solver:
         return self.get_targets_computation(targets)
 
     def initialize(self, inputs):
-        assert inputs is not None, "inputs cannot be None!"
+        """ Initialize parameters given the input numbers. """
+        assert inputs is not None, "`inputs` cannot be None!"
 
         # Get list of inputs
         self.inputs = inputs
@@ -99,6 +117,10 @@ class Solver:
 
         self.n = len(self.inputs)
         self.range_n = range(self.n)
+
+        # Check operations
+        if isinstance(self.operations, list) and isinstance(self.operations[0], str):
+            self.operations = get_operations(self.operations)
 
         # Initialize the results dictionary
         # TODO explain structure
@@ -145,13 +167,20 @@ class Solver:
 
                     # When working with duplicate input numbers, there might be duplicates in the calculations.
                     # Remove these.
-                    if self.duplicates:
+                    if self.duplicates and len(self.results_string[_n][combi]) > 1:
                         unique_str, idx = np.unique(self.results_string[_n][combi], return_index=True)
                         if len(unique_str) < len(self.results_string[_n][combi]):
                             self.results[_n][combi] = self.results[_n][combi][idx]
                             self.results_string[_n][combi] = unique_str
 
-    def get_targets_computation(self, targets: Union[int, float, list[int, float]]) -> dict[Union[int, float], str]:
+                    if self.reduce_multiple_answers and len(self.results[_n][combi]) > 1:
+                        # Keep only the first possibility per unique answer
+                        unique, idx = np.unique(self.results[_n][combi], return_index=True)
+                        if len(unique) < len(self.results[_n][combi]):
+                            self.results[_n][combi] = unique
+                            self.results_string[_n][combi] = self.results_string[_n][combi][idx]
+
+    def get_targets_computation(self, targets: Union[int, float, list[int, float]]) -> dict[Union[int, float], np.ndarray[str]]:
         """
         For a single target or list of targets, get the computation to achieve the target.
         """
