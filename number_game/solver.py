@@ -1,8 +1,8 @@
 from inspect import isclass
 from typing import Union
+from itertools import combinations
 
 import numpy as np
-from itertools import combinations
 
 import operations as ops
 
@@ -18,9 +18,10 @@ def get_operations(operation_names: list[str]) -> (list[callable], list[callable
 
     Outputs
     -------
-    operations: list
-        List with instanced/callable operations
-
+    operations_one: list
+        List with instanced/callable operations with one parameter
+    operations_two: list
+        List with instanced/callable operations with two parameters
     """
     all_operation_one_names = [_class for _class in dir(ops) if (isclass(getattr(ops, _class))) and (_class != 'BaseOperationOne') and issubclass(getattr(ops, _class), ops.BaseOperationOne)]
     all_operation_two_names = [_class for _class in dir(ops) if (isclass(getattr(ops, _class))) and (_class != 'BaseOperationTwo') and issubclass(getattr(ops, _class), ops.BaseOperationTwo)]
@@ -306,18 +307,3 @@ class StirlingSecondKindGenerator:
             parts[i].pop()
             if len(parts[i]) == 0:
                 empty += 1
-
-
-if __name__ == "__main__":
-    # sskg = StirlingSecondKindGenerator()
-    # r = sskg(4, 2)
-    # print(r)
-    # print(len(r))
-
-    operations = ['plus', 'min', 'times', 'division']
-
-    solver = Solver(operations=operations)
-
-    numbers = [3, 3, 7, 7]
-    out = solver(numbers, 24)
-    print(out)

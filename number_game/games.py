@@ -1,9 +1,10 @@
-from solver import Solver, get_operations
+from solver import Solver
 
 
 class TwentyFourGame:
     """
     Twenty four (24) game
+    ---------------------
 
     Given four numbers between 0 and 9, try to make 24. Allowed operations are addition, subtraction,
     multiplication and division. For example:
@@ -25,6 +26,7 @@ class TwentyFourGame:
 class SevenSevensGame:
     """
     Seven sevens game
+    -----------------
 
     Given seven sevens, try to make as many natural numbers as possible, starting at zero.
     Allowed operations are addition, subtraction, multiplication, division, powers and TODO .
@@ -46,7 +48,6 @@ class SevenSevensGame:
 
     def __init__(self):
         operation_names = ['plus', 'min', 'times', 'divide', 'power', 'factorial']
-        # operations = get_operations(operation_names)
         self.s = Solver(operation_names, reduce_multiple_answers=True)
 
         # Check for calculation
