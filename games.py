@@ -16,8 +16,7 @@ class TwentyFourGame:
     """
     def __init__(self):
         operation_names = ['plus', 'min', 'times', 'divide']
-        operations = get_operations(operation_names)
-        self.s = Solver(operations)
+        self.s = Solver(operation_names)
 
     def __call__(self, numbers):
         return self.s(numbers, 24)[24]
@@ -46,9 +45,9 @@ class SevenSevensGame:
     """
 
     def __init__(self):
-        operation_names = ['plus', 'min', 'times', 'divide', 'power']
-        operations = get_operations(operation_names)
-        self.s = Solver(operations, reduce_multiple_answers=True)
+        operation_names = ['plus', 'min', 'times', 'divide', 'power', 'factorial']
+        # operations = get_operations(operation_names)
+        self.s = Solver(operation_names, reduce_multiple_answers=True)
 
         # Check for calculation
         self._did_calc = False
@@ -70,5 +69,6 @@ class SevenSevensGame:
 
 
 if __name__ == "__main__":
+    # a = TwentyFourGame()([1, 3, 5, 7])
     a = SevenSevensGame()(range(100))
     print(a)

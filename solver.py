@@ -7,7 +7,7 @@ from itertools import combinations
 import operations as ops
 
 
-def get_operations(operation_names: list[str]) -> list[callable]:
+def get_operations(operation_names: list[str]) -> (list[callable], list[callable]):
     """
     Translates a list of operation names to actual instanced operations.
 
@@ -22,39 +22,55 @@ def get_operations(operation_names: list[str]) -> list[callable]:
         List with instanced/callable operations
 
     """
-    all_operation_names = [_class for _class in dir(ops) if (isclass(getattr(ops, _class))) and (_class != 'BaseOperation') and issubclass(getattr(ops, _class), ops.BaseOperation)]
+    all_operation_one_names = [_class for _class in dir(ops) if (isclass(getattr(ops, _class))) and (_class != 'BaseOperationOne') and issubclass(getattr(ops, _class), ops.BaseOperationOne)]
+    all_operation_two_names = [_class for _class in dir(ops) if (isclass(getattr(ops, _class))) and (_class != 'BaseOperationTwo') and issubclass(getattr(ops, _class), ops.BaseOperationTwo)]
 
     # Make a list of all aliases of the operations
-    aliases = dict()
-    for name in all_operation_names:
+    aliases_one = dict()
+    for name in all_operation_one_names:
         op = getattr(ops, name)
-        aliases = {**aliases, **dict(zip(op.names, [name] * len(op.names)))}
+        aliases_one = {**aliases_one, **dict(zip(op.names, [name] * len(op.names)))}
+    aliases_two = dict()
+    for name in all_operation_two_names:
+        op = getattr(ops, name)
+        aliases_two = {**aliases_two, **dict(zip(op.names, [name] * len(op.names)))}
 
     # Look through the operations to
-    operations = list()
+    operations_one = list()
+    operations_two = list()
     active_operations = list()
     for name in operation_names:
         # I
-        if name in aliases:
+        if name in aliases_one:
+            if aliases_one[name] in active_operations:
+                print(f"Operation {name} already found! Skipping...")
+                continue
+            op = getattr(ops, aliases_one[name])
+
+            operations_one.append(op())
+
+            active_operations.append(aliases_one[name])
+
+        elif name in aliases_two:
             # Check if the operation has not been added already
-            if aliases[name] in active_operations:
+            if aliases_two[name] in active_operations:
                 print(f"Operation {name} already found! Skipping...")
                 continue
 
-            op = getattr(ops, aliases[name])
+            op = getattr(ops, aliases_two[name])
             # Initialize operations
             if 'invert' in op.__init__.__code__.co_varnames:
                 # Add both normal and inverted operation (if available)
-                operations.append(op(invert=False))
-                operations.append(op(invert=True))
+                operations_two.append(op(invert=False))
+                operations_two.append(op(invert=True))
             else:
-                operations.append(op())
+                operations_two.append(op())
 
-            active_operations.append(aliases[name])
+            active_operations.append(aliases_two[name])
         else:
             print(f"Operation {name} not found!")
 
-    return operations
+    return operations_one, operations_two
 
 
 class Solver:
@@ -77,11 +93,15 @@ class Solver:
     --------
     ...
     """
-    def __init__(self, operations: list[Union[str, callable]], reduce_multiple_answers: bool = False):
-        self.operations = operations
+    def __init__(self, operations: list[str], reduce_multiple_answers: bool = False):
+        self._operations = operations
         self.reduce_multiple_answers = reduce_multiple_answers
 
         self.sskg = StirlingSecondKindGenerator()
+
+        # Operations with one or two parameters
+        self.operations_one = None
+        self.operations_two = None
 
         # Parameters concerning inputs
         self.inputs = None
@@ -119,8 +139,8 @@ class Solver:
         self.range_n = range(self.n)
 
         # Check operations
-        if isinstance(self.operations, list) and isinstance(self.operations[0], str):
-            self.operations = get_operations(self.operations)
+        if isinstance(self._operations, list) and isinstance(self._operations[0], str):
+            self.operations_one, self.operations_two = get_operations(self._operations)
 
         # Initialize the results dictionary
         # TODO explain structure
@@ -131,6 +151,27 @@ class Solver:
         # Structure is similar to the `results`.
         self.results_string = {x + 1: dict() for x in self.range_n}
         self.results_string[1] = {((i,),): np.array([str(self.inputs[i])]) for i in self.range_n}
+
+    def _remove_duplicates(self, results, results_string):
+        """ Remove duplicates (if required) """
+        if self.duplicates and len(results_string) > 1:
+            unique_str, idx = np.unique(results_string, return_index=True)
+            if len(unique_str) < len(results_string):
+                results = results[idx]
+                results_string = unique_str
+
+        return results, results_string
+
+    def _reduce_multiple_answers(self, results, results_string):
+        """ Reduce multiple answers (if required)"""
+        if self.reduce_multiple_answers and len(results) > 1:
+            # Keep only the first possibility per unique answer
+            unique, idx = np.unique(results, return_index=True)
+            if len(unique) < len(results):
+                results = unique
+                results_string = results_string[idx]
+
+        return results, results_string
 
     def calculate_combinations(self):
         """
@@ -159,26 +200,33 @@ class Solver:
                     p1_string = self.results_string[len(part1)][part1]
                     p2_string = self.results_string[len(part2)][part2]
 
-                    # Loop over all active operations and append the results
-                    for operation in self.operations:
-                        result, result_str = operation(p1, p2, p1_string, p2_string)
-                        self.results[_n][combi] = np.append(self.results[_n][combi], result)
-                        self.results_string[_n][combi] = np.append(self.results_string[_n][combi], result_str)
+                    if len(self.operations_two) > 0:
+                        # Loop over all active two parameter operations and append the results
+                        for operation in self.operations_two:
+                            result, result_str = operation(p1, p2, p1_string, p2_string)
+                            self.results[_n][combi] = np.append(self.results[_n][combi], result)
+                            self.results_string[_n][combi] = np.append(self.results_string[_n][combi], result_str)
 
-                    # When working with duplicate input numbers, there might be duplicates in the calculations.
-                    # Remove these.
-                    if self.duplicates and len(self.results_string[_n][combi]) > 1:
-                        unique_str, idx = np.unique(self.results_string[_n][combi], return_index=True)
-                        if len(unique_str) < len(self.results_string[_n][combi]):
-                            self.results[_n][combi] = self.results[_n][combi][idx]
-                            self.results_string[_n][combi] = unique_str
+                        # When working with duplicate input numbers, there might be duplicates in the calculations.
+                        # Remove these.
+                        self.results[_n][combi], self.results_string[_n][combi] = self._remove_duplicates(self.results[_n][combi], self.results_string[_n][combi])
 
-                    if self.reduce_multiple_answers and len(self.results[_n][combi]) > 1:
                         # Keep only the first possibility per unique answer
-                        unique, idx = np.unique(self.results[_n][combi], return_index=True)
-                        if len(unique) < len(self.results[_n][combi]):
-                            self.results[_n][combi] = unique
-                            self.results_string[_n][combi] = self.results_string[_n][combi][idx]
+                        self.results[_n][combi], self.results_string[_n][combi] = self._reduce_multiple_answers(self.results[_n][combi], self.results_string[_n][combi])
+
+                    if len(self.operations_one) > 0:
+                        # Loop over all active one parameter operations and append the results
+                        for operation in self.operations_one:
+                            result, result_str = operation(self.results[_n][combi], self.results_string[_n][combi])
+                            self.results[_n][combi] = np.append(self.results[_n][combi], result)
+                            self.results_string[_n][combi] = np.append(self.results_string[_n][combi], result_str)
+
+                        # When working with duplicate input numbers, there might be duplicates in the calculations.
+                        # Remove these.
+                        self.results[_n][combi], self.results_string[_n][combi] = self._remove_duplicates(self.results[_n][combi], self.results_string[_n][combi])
+
+                        # Keep only the first possibility per unique answer
+                        self.results[_n][combi], self.results_string[_n][combi] = self._reduce_multiple_answers(self.results[_n][combi], self.results_string[_n][combi])
 
     def get_targets_computation(self, targets: Union[int, float, list[int, float]]) -> dict[Union[int, float], np.ndarray[str]]:
         """
@@ -266,7 +314,7 @@ if __name__ == "__main__":
     # print(r)
     # print(len(r))
 
-    operations = get_operations(['plus', 'min', 'times', 'division'])
+    operations = ['plus', 'min', 'times', 'division']
 
     solver = Solver(operations=operations)
 
