@@ -23,5 +23,5 @@ jobs:
         python -m unittest discover tests
     - name: Lint with Ruff
       run: |
-        ruff --format=github --target-version=py37 .
+        ruff --format=github --target-version=py37 --ignore "E501" .
       continue-on-error: true
