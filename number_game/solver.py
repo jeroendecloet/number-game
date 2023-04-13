@@ -4,7 +4,7 @@ from itertools import combinations
 
 import numpy as np
 
-import operations as ops
+import number_game.operations as ops
 
 
 def get_operations(operation_names: list[str]) -> (list[callable], list[callable]):

@@ -1,4 +1,4 @@
-from solver import Solver
+from number_game.solver import Solver
 
 
 class TwentyFourGame:
