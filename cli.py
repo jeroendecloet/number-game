@@ -36,14 +36,18 @@ class NumberGame:
             prog='ng24',
             description="Twenty-four game"
         )
-        parser.add_argument('integers', type=int, nargs=4,
+        parser.add_argument('integers', type=int, nargs="*",
                             help='Input integers (four numbers)')
 
         game = games.TwentyFourGame()
 
         args = parser.parse_args(sys.argv[2:])
         _input = args.integers
-        assert len(_input) == 4, "Four numbers should be given!"
+
+        if len(_input) == 1 and len(str(_input[0])) == 4:
+            # Split integer, e.g. [1234] -> [1, 2, 3, 4]
+            _input = [int(x) for x in str(_input[0])]
+
         result = game(_input)
         print(result)
 
