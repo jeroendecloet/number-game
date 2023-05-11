@@ -274,7 +274,7 @@ class StirlingSecondKindGenerator:
     def __init__(self):
         self.results = []
 
-    def __call__(self, n, k, items=None):
+    def __call__(self, n: int, k: int, items: list = None) -> list[tuple]:
         self.results = []
         parts = [[] for _ in range(k)]
         self.generate_parts(parts, empty=k, n=n, k=k, m=0, last_filled=-1)
@@ -283,10 +283,10 @@ class StirlingSecondKindGenerator:
             return self.results
         else:
             return [
-                [[items[idx] for idx in index_lists] for index_lists in result] for result in self.results
+                tuple(tuple(items[idx] for idx in index_lists) for index_lists in result) for result in self.results
             ]
 
-    def generate_parts(self, parts: list, empty, n, k, m, last_filled):
+    def generate_parts(self, parts: list, empty: int, n: int, k: int, m: int, last_filled: int) -> None:
         """ Loops iterative over the numbers to add the possibilities. """
         if m == n:
             self.results.append(
