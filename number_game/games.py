@@ -49,7 +49,7 @@ class SevenSevensGame:
     """
 
     def __init__(self):
-        operation_names = ['plus', 'min', 'times', 'divide', 'power', 'factorial', 'sqrt']
+        operation_names = ['plus', 'min', 'times', 'divide', 'power', 'factorial']
         self.s = Solver(operation_names, reduce_multiple_answers=True)
 
         # Check for calculation
