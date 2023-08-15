@@ -1,3 +1,5 @@
+import numpy as np
+
 from number_game.solver import Solver
 
 
@@ -47,7 +49,7 @@ class SevenSevensGame:
     """
 
     def __init__(self):
-        operation_names = ['plus', 'min', 'times', 'divide', 'power', 'factorial']
+        operation_names = ['plus', 'min', 'times', 'divide', 'power', 'factorial', 'sqrt']
         self.s = Solver(operation_names, reduce_multiple_answers=True)
 
         # Check for calculation
@@ -66,7 +68,8 @@ class SevenSevensGame:
         if not self._did_calc:
             self.calc()
 
-        return self.s.get_targets_computation(targets)
+        results = self.s.get_targets_computation(targets)
+        return {str(key): str(val[0]) if isinstance(val, np.ndarray) else str(val) for key, val in results.items()}
 
 
 if __name__ == "__main__":

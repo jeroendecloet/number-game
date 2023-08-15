@@ -231,7 +231,7 @@ class Factorial(BaseOperationOne):
     str_format = "{x_str}!"
 
     def operation(self, x: np.ndarray) -> np.ndarray:
-        return np.array([np.prod(np.arange(1, _x)) for _x in x])
+        return np.array([np.prod(np.arange(1, _x + 1)) for _x in x])
 
     def filter_inputs(self, x: np.ndarray, x_str: np.ndarray) -> (np.ndarray, np.ndarray):
         positive = x > 0
